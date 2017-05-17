@@ -8,15 +8,15 @@
     Used to execute function defined in the same file.
     * Yield(): relinquish CPU Time
     * Exit(Status): Terminate current process
-    * **COMPLETED** ~~ Exec(filename): Spawns a new user-level process to execute the file named. ~~
+    * **COMPLETED** ~~Exec(filename): Spawns a new user-level process to execute the file named.~~
     * Join(ID): waits and returns only after a process with the specified ID finishes and exit code collected.
-    * **COMPLETED:** ~~ Halt(): Turn off the machine ~~
+    * **COMPLETED:** ~~Halt(): Turn off the machine~~
   * Part2: File-oriented System Calls:
     * Create()
     * Open()
     * Read()
     * Write():
-      ** **COMPLETED:** ~~ print directly to console ~~
+      ** **COMPLETED:** ~~print directly to console~~
     * Close()
 
 ---
