@@ -16,7 +16,7 @@
     * Open()
     * Read()
     * Write():
-      ** **COMPLETED:** ~~print directly to console~~
+      * **COMPLETED:** ~~print directly to console~~
     * Close()
 
 ---
