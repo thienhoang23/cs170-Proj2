@@ -121,9 +121,28 @@ ExceptionHandler(ExceptionType which)
 void doExit()
 {
     //Set the exit status in the PCB of this process 
-    //Also let other processes  know this process  exits.
+    int status = machine->ReadRegister(4);
+    //Also let other processes  know this process exits.
+
     //Clean up the space of this process
+
     //Terminate the current Nacho thread
+
+    int currPID = currentThread->space->getpid();
+
+    fprintf(stderr, "Process %d exits with %d\n", currPID, status);
+
+    //Set the exit status in the PCB of this process 
+    
+    //Also let other processes  know this process  exits.
+
+   //Clean up the space of this process
+    delete currentThread->space;
+    currentThread->space = NULL;
+    processManager->freePid(currPID);
+    
+    //Terminate the current Nacho thread
+    currentThread->Finish();
 }
 
 //----------------------------------------------------------------------
@@ -276,11 +295,12 @@ SpaceId doFork()
     parentPid = currentThread->space->getpid();
     childPid = dupAddrSpace->getpid();
 
+    fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
+
     PCB *childPcb = new PCB(parentPid, childPid);
     processManager->trackPcb(childPid, childPcb);
     childPcb -> thread = child_Thread;
     childPcb -> thread -> space = dupAddrSpace;
-    
     // New thread runs a dummy function creates a bridge for execution of the user function
     childPcb->thread->Fork(ForkBridge, Func1Addr);
     // Current thread Yield so new thread can run
@@ -292,6 +312,7 @@ void ForkBridge(int newProcessPC)
 {
     // Get fresh registers, but use copy of addr space
     currentThread->space->InitRegisters();
+    // currentThread->RestoreUserState();
     currentThread->space->RestoreState();
 
     // Set the PC and run

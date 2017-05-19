@@ -8,6 +8,11 @@
 
 class Thread;
 
+#define P_GOOD    0;
+#define P_BAD     1;
+#define P_RUNNING 2;
+#define P_BLOCKED 3;
+
 class PCB {
 
 public:

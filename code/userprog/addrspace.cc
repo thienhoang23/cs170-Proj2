@@ -147,7 +147,6 @@ AddrSpace::AddrSpace(const AddrSpace* other)
         pageTable[i].physicalPage = memoryManager -> allocFrame(); //Get the next avail. phys. frame
         int physAddrSrc = other->pageTable[i].physicalPage * PageSize;
         int physAddrDest = this->pageTable[i].physicalPage * PageSize;
-        bzero(&(machine->mainMemory[physAddrDest]), PageSize);
         bcopy(&(machine->mainMemory[physAddrSrc]), &(machine->mainMemory[physAddrDest]), PageSize);
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;
@@ -164,7 +163,10 @@ AddrSpace::AddrSpace(const AddrSpace* other)
 
 AddrSpace::~AddrSpace()
 {
-    delete [] pageTable;
+    for(int i = 0; i < numPages; i++){
+        memoryManager->freeFrame(pageTable[i].physicalPage);
+    }
+    delete[] pageTable;
 }
 
 //----------------------------------------------------------------------
