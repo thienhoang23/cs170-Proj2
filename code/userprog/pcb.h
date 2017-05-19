@@ -6,7 +6,7 @@
 #ifndef PCB_H
 #define PCB_H
 
-#include "system.h"
+class Thread;
 
 class PCB {
 
@@ -14,10 +14,10 @@ public:
     PCB(int pid, int parentPid);
     ~PCB();
 
-    int pid;            // Process ID
-    int parentPid;      // Parent's Process ID
-    Thread *thread;     // Kernel thread that controls this process
-
+    int pid;            	// Process ID
+    int parentPid;      	// Parent's Process ID
+    Thread *thread;     	// Kernel thread that controls this process has the registers, 
+    						// PC, and address_space
 };
 
 #endif // PCB_H

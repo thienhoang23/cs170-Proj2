@@ -80,17 +80,18 @@ AddrSpace::AddrSpace(OpenFile *executable)
     size = numPages * PageSize;
 
     ASSERT(numPages <= NumPhysPages);   // check we're not trying
-    // to run anything too big --
-    // at least until we have
-    // virtual memory
+                                        // to run anything too big --
+                                        // at least until we have
+                                        // virtual memory
 
     DEBUG('a', "Initializing address space, num pages %d, size %d\n",
           numPages, size);
-// first, set up the translation
+    // first, set up the translation
+    memoryManager->lock->Acquire();
     pageTable = new TranslationEntry[numPages];
     for (i = 0; i < numPages; i++) {
-        pageTable[i].virtualPage = i; // for now, virtual page # = phys page #
-        pageTable[i].physicalPage = i;
+        pageTable[i].virtualPage = i; 
+        pageTable[i].physicalPage = memoryManager -> allocFrame(); //Get the next avail. phys. frame
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;
         pageTable[i].dirty = FALSE;
@@ -98,12 +99,23 @@ AddrSpace::AddrSpace(OpenFile *executable)
         // a separate page, we could set its
         // pages to be read-only
     }
+    memoryManager->lock->Release();
+    
+    // Get Pid assoc. with addr space
+    this->pid = processManager->allocPid();
 
-// zero out the entire address space, to zero the unitialized data segment
-// and the stack segment
-    bzero(machine->mainMemory, size);
+    // zero out the needed space, to zero the unitialized data segment
+    // and the stack segment
+    machineLock->Acquire();
+    for (i = 0; i < numPages; i++) {
+        int physAddr = pageTable[i].physicalPage * PageSize;
+        bzero(&(machine->mainMemory[physAddr]), PageSize);
+    }
 
-// then, copy in the code and data segments into memory
+    DEBUG('a', "Loaded Program: %d code | %d data | %d bss\n",
+        noffH.code.size, noffH.initData.size, noffH.uninitData.size);
+
+    // then, copy in the code and data segments into memory
     if (noffH.code.size > 0) {
         DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
               noffH.code.virtualAddr, noffH.code.size);
@@ -116,7 +128,33 @@ AddrSpace::AddrSpace(OpenFile *executable)
         executable->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr]),
                            noffH.initData.size, noffH.initData.inFileAddr);
     }
+    machineLock->Release();
+}
 
+//----------------------------------------------------------------------
+// AddrSpace::AddrSpace(const AddrSpace* other)
+// Copy Constructor. Used to create a duplicate of the address space
+//----------------------------------------------------------------------
+
+AddrSpace::AddrSpace(const AddrSpace* other)
+{
+    this->numPages = other->numPages;
+    this->pid = processManager->allocPid();
+    memoryManager->lock->Acquire();
+    this->pageTable = new TranslationEntry[numPages];
+    for (int i = 0; i < numPages; i++) {
+        pageTable[i].virtualPage = other->pageTable[i].virtualPage; 
+        pageTable[i].physicalPage = memoryManager -> allocFrame(); //Get the next avail. phys. frame
+        int physAddrSrc = other->pageTable[i].physicalPage * PageSize;
+        int physAddrDest = this->pageTable[i].physicalPage * PageSize;
+        bzero(&(machine->mainMemory[physAddrDest]), PageSize);
+        bcopy(&(machine->mainMemory[physAddrSrc]), &(machine->mainMemory[physAddrDest]), PageSize);
+        pageTable[i].valid = TRUE;
+        pageTable[i].use = FALSE;
+        pageTable[i].dirty = FALSE;
+        pageTable[i].readOnly = FALSE;
+    }
+    memoryManager->lock->Release();
 }
 
 //----------------------------------------------------------------------

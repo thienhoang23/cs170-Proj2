@@ -22,4 +22,5 @@ PCB::PCB(int pid, int parentPid)
 
 PCB::~PCB()
 {
+	delete this->thread;
 }

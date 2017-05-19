@@ -38,4 +38,5 @@ main()
 {
 	print("main forking proc1...\n");
 	Fork(proc1);
+	Fork(proc1);
 }

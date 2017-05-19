@@ -18,9 +18,12 @@
 
 #define UserStackSize 1024              // increase this as necessary!
 
+#define DEFAULT_PID -1
+
 class AddrSpace {
 
 public:
+    AddrSpace(const AddrSpace* other);  // Copy constructor
     AddrSpace(OpenFile *executable);	// Create an address space,
                                         // initializing it with the program
                                         // stored in the file "executable"
@@ -34,12 +37,18 @@ public:
 
     int Translate(int virtualAddr);     // Return the physical memory address
                                         // mapped by a virtual address
+    void setpid(int pid){this->pid = pid;}
+
+    int getpid(){ return pid; }
+
+    unsigned int getNumPages(){ return numPages; }
 
 private:
     TranslationEntry *pageTable;	    // Assume linear page table translation
                                         // for now!
-    unsigned int numPages;		        // Number of pages in the virtual
+    unsigned int numPages;              // Number of pages in the virtual
                                         // address space
+    int pid;                            // Can be used to get PCB from ProcessManager`
 };
 
 #endif // ADDRSPACE_H

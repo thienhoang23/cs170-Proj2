@@ -4,7 +4,7 @@
 
 ## TO DO LIST:
   * Part1: Process-oriented System Calls:
-    * Fork: creates a new user-level process whose address space starts out as a copy of that of the caller.
+    * Fork: creates a new user-level process whose address space starts out as a copy of that of the caller. 
     Used to execute function defined in the same file.
     * Yield(): relinquish CPU Time
     * Exit(Status): Terminate current process

@@ -14,6 +14,7 @@ MemoryManager::MemoryManager()
 {
     // Create a bitmap with one bit for each frame
     frames = new BitMap(NumPhysPages);
+    lock = new Lock("MemoryManagerLock");
 }
 
 //----------------------------------------------------------------------
@@ -24,6 +25,7 @@ MemoryManager::MemoryManager()
 MemoryManager::~MemoryManager()
 {
     delete frames;
+    delete lock;
 }
 
 //----------------------------------------------------------------------
@@ -33,7 +35,7 @@ MemoryManager::~MemoryManager()
 
 int MemoryManager::allocFrame()
 {
-    return 0;
+    return frames -> Find();
 }
 
 //----------------------------------------------------------------------
@@ -44,4 +46,5 @@ int MemoryManager::allocFrame()
 
 void MemoryManager::freeFrame(int frame)
 {
+	frames -> Clear(frame);
 }

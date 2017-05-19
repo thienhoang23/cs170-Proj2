@@ -7,6 +7,8 @@
 #define PROCESSMANAGER_H
 
 #include "bitmap.h"
+#include "../threads/synch.h"
+#include "pcb.h"
 
 #define MAX_PROCESSES 8
 
@@ -16,12 +18,17 @@ public:
     ProcessManager();
     ~ProcessManager();
 
-    int allocPid();         // Allocate a new PID
-    void freePid(int pid);  // Free an allocated PID
+    int allocPid();         			// Allocate a new PID
+    void trackPcb(int pid, PCB *pcb);	// Allocate the accompany PCB to pid
+    void freePid(int pid);  			// Free an allocated PID
+    PCB* getPCB(int pid);
+    int getNumPidAvail(){ return pids->NumClear();}
+
+    Lock *lock;
 
 private:
-    BitMap *pids;           // Table to keep track of PIDs
-
+    BitMap *pids;           			// Table to keep track of PIDs
+    PCB **PCB_list;						// Table to keep track of PCBs
 };
 
 #endif // PROCESSMANAGER_H

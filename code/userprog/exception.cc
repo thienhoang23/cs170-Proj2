@@ -35,9 +35,12 @@
 
 #define MAX_FILENAME 256
 
+SpaceId doFork();
+void ForkBridge(int newProcessPC);
 void doExit();
 int doExec();
 void doWrite();
+void doYield();
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -73,6 +76,11 @@ ExceptionHandler(ExceptionType which)
                 DEBUG('a', "Shutdown, initiated by user program.\n");
                 interrupt->Halt();
                 break;
+            case SC_Fork:
+                DEBUG('a', "Fork() system call invoked.\n");
+                result = doFork();
+                machine->WriteRegister(2, result);
+                break;
             case SC_Exit:
                 DEBUG('a', "Exit() system call invoked.\n");
                 doExit();
@@ -81,6 +89,10 @@ ExceptionHandler(ExceptionType which)
                 DEBUG('a', "Exec() system call invoked.\n");
                 result = doExec();
                 machine->WriteRegister(2, result);
+                break;
+            case SC_Yield:
+                DEBUG('a', "Yield() system call invoked.\n");
+                doYield();
                 break;
             case SC_Write:
                 DEBUG('a', "Write() system call invoked.\n");
@@ -108,6 +120,10 @@ ExceptionHandler(ExceptionType which)
 
 void doExit()
 {
+    //Set the exit status in the PCB of this process 
+    //Also let other processes  know this process  exits.
+    //Clean up the space of this process
+    //Terminate the current Nacho thread
 }
 
 //----------------------------------------------------------------------
@@ -165,7 +181,9 @@ int doExec()
     // initialized with the parent's PID (i.e. that of the current process)
     // and the newly created child's PID.
     parentPid = 0;
-    childPid = processManager->allocPid();
+    processManager -> lock -> Acquire();
+    childPid = processManager -> allocPid();
+    processManager -> lock -> Release();
     childPcb = new PCB(parentPid, childPid);
 
     // The new process needs a kernel thread by which we can manage its state
@@ -237,3 +255,61 @@ void doWrite()
     delete[] kernelBuf;
 }
 
+SpaceId doFork()
+{
+    // Sanity Check
+    if (currentThread->space->getNumPages() > NumPhysPages || 
+        processManager->getNumPidAvail() <= 0)
+        return -1;
+
+    // Func1 address is in register 4
+    int Func1Addr = machine->ReadRegister(4);
+
+    // Create a new kernel thread for the child
+    Thread* child_Thread = new Thread("child of Fork()");
+
+    // Create a duplicate address space of current process
+    AddrSpace *dupAddrSpace = new AddrSpace(currentThread->space);
+    
+    // Create Child PCB
+    int parentPid, childPid;
+    parentPid = currentThread->space->getpid();
+    childPid = dupAddrSpace->getpid();
+
+    PCB *childPcb = new PCB(parentPid, childPid);
+    processManager->trackPcb(childPid, childPcb);
+    childPcb -> thread = child_Thread;
+    childPcb -> thread -> space = dupAddrSpace;
+    
+    // New thread runs a dummy function creates a bridge for execution of the user function
+    childPcb->thread->Fork(ForkBridge, Func1Addr);
+    // Current thread Yield so new thread can run
+    doYield();
+    return childPid;
+}
+
+void ForkBridge(int newProcessPC)
+{
+    // Get fresh registers, but use copy of addr space
+    currentThread->space->InitRegisters();
+    currentThread->space->RestoreState();
+
+    // Set the PC and run
+    machine->WriteRegister(PCReg, newProcessPC);
+    machine->WriteRegister(PrevPCReg, newProcessPC - 4);
+    machine->WriteRegister(NextPCReg, newProcessPC + 4);
+
+    machine->Run();
+    ASSERT(FALSE); // should never reach here
+}
+
+void doYield()
+{
+    currentThread->SaveUserState();
+    //This kernel thread yields
+    currentThread->Yield();
+    //Now this process is resumed for execution after yielding.
+    //Restore the corresponding user process's states (both registers and page table)
+    //Save the corresponding user process's register states.
+    currentThread->RestoreUserState();
+}
