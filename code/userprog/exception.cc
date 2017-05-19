@@ -41,6 +41,7 @@ void doExit();
 int doExec();
 void doWrite();
 void doYield();
+int doJoin();
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -94,6 +95,11 @@ ExceptionHandler(ExceptionType which)
                 DEBUG('a', "Yield() system call invoked.\n");
                 doYield();
                 break;
+            case SC_Join:
+                DEBUG('a', "Join() system call invoked.\n");
+                result = doJoin();
+                machine->WriteRegister(2, result);
+                break;
             case SC_Write:
                 DEBUG('a', "Write() system call invoked.\n");
                 doWrite();
@@ -120,26 +126,21 @@ ExceptionHandler(ExceptionType which)
 
 void doExit()
 {
-    //Set the exit status in the PCB of this process 
+    //Get status code
     int status = machine->ReadRegister(4);
-    //Also let other processes  know this process exits.
-
-    //Clean up the space of this process
-
-    //Terminate the current Nacho thread
-
-    int currPID = currentThread->space->getpid();
-
-    fprintf(stderr, "Process %d exits with %d\n", currPID, status);
 
     //Set the exit status in the PCB of this process 
-    
+    int curPID = currentThread->space->getpid();
+    PCB* curPCB = processManager -> getPCB(curPID);
+    curPCB->setExitStatus(status);
+    //fprintf(stderr, "Process %d exits with %d\n", curPID, status);
+
     //Also let other processes  know this process  exits.
+
 
    //Clean up the space of this process
     delete currentThread->space;
     currentThread->space = NULL;
-    processManager->freePid(currPID);
     
     //Terminate the current Nacho thread
     currentThread->Finish();
@@ -295,7 +296,7 @@ SpaceId doFork()
     parentPid = currentThread->space->getpid();
     childPid = dupAddrSpace->getpid();
 
-    fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
+    //fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
 
     PCB *childPcb = new PCB(parentPid, childPid);
     processManager->trackPcb(childPid, childPcb);
@@ -333,4 +334,12 @@ void doYield()
     //Restore the corresponding user process's states (both registers and page table)
     //Save the corresponding user process's register states.
     currentThread->RestoreUserState();
+}
+
+
+int doJoin()
+{
+    //Read the child Process Id
+    int childPID = machine->ReadRegister(4);
+    processManager->waitFor(childPID);
 }

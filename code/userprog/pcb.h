@@ -8,10 +8,7 @@
 
 class Thread;
 
-#define P_GOOD    0;
-#define P_BAD     1;
-#define P_RUNNING 2;
-#define P_BLOCKED 3;
+#define NOT_FINISHED -1
 
 class PCB {
 
@@ -19,6 +16,11 @@ public:
     PCB(int pid, int parentPid);
     ~PCB();
 
+    void setExitStatus(int status);
+
+    int getExitStatus();
+
+    int exitStatus;
     int pid;            	// Process ID
     int parentPid;      	// Parent's Process ID
     Thread *thread;     	// Kernel thread that controls this process has the registers, 

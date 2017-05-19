@@ -13,6 +13,7 @@ PCB::PCB(int pid, int parentPid)
 {
     this->pid = pid;
     this->parentPid = parentPid;
+    this->exitStatus = NOT_FINISHED;
 }
 
 //----------------------------------------------------------------------
@@ -22,5 +23,8 @@ PCB::PCB(int pid, int parentPid)
 
 PCB::~PCB()
 {
-	delete this->thread;
 }
+
+void PCB::setExitStatus(int status){ this-> exitStatus = status;}
+
+int PCB::getExitStatus(){ return exitStatus;}
