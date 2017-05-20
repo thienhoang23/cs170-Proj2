@@ -134,7 +134,7 @@ void doExit()
     curPCB->setExitStatus(status);
 
     //Also let other processes know this process  exits.
-    fprintf(stderr, "Process  %d is broadcasting exit\n", currentThread -> space -> getpid());    
+    //fprintf(stderr, "Process  %d is broadcasting exit\n", currentThread -> space -> getpid());    
     processManager -> broadcastExit(curPID);
 
     //Clean up the space of this process
@@ -223,7 +223,7 @@ int doExec()
     processManager -> trackPCB(childPid, childPcb);
 
     // The new process needs a kernel thread by which we can manage its state
-    childThread = new Thread("child of Exec()");
+    childThread = new Thread(filename);
 
     // Link everything together
     childThread -> space = childSpace;
