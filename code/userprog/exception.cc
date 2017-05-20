@@ -199,9 +199,6 @@ int doExec()
 
     *kernelPtr = '\0';
 
-    // The new process needs a kernel thread by which we can manage its state
-    childThread = new Thread("child of Exec()");
-
     // Finally it needs an address space. We will initialize the address
     // space by loading in the program found in the executable file that was
     // passed in as the first argument.
@@ -212,6 +209,11 @@ int doExec()
     }
 
     childSpace = new AddrSpace(execFile);
+    if(!childSpace->isValid()){
+        delete childSpace;
+        delete execFile;
+        return -1;
+    }
 
     // Initialize new PCB
     childPid = childSpace -> getpid();
@@ -219,6 +221,9 @@ int doExec()
     childPcb = new PCB(childPid, parentPid);
 
     processManager -> trackPCB(childPid, childPcb);
+
+    // The new process needs a kernel thread by which we can manage its state
+    childThread = new Thread("child of Exec()");
 
     // Link everything together
     childThread -> space = childSpace;

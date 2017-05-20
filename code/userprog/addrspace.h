@@ -18,7 +18,7 @@
 
 #define UserStackSize 1024              // increase this as necessary!
 
-#define DEFAULT_PID -1
+#define DOES_NOT_EXIT -1
 
 class AddrSpace {
 
@@ -40,6 +40,8 @@ public:
     unsigned int getNumPages(){ return numPages; }
 
     int getpid(){return pid;}
+
+    bool isValid(){return pid != DOES_NOT_EXIT;}
 
 private:
     TranslationEntry *pageTable;	    // Assume linear page table translation

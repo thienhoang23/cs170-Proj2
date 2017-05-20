@@ -79,7 +79,12 @@ AddrSpace::AddrSpace(OpenFile *executable)
     numPages = divRoundUp(size, PageSize);
     size = numPages * PageSize;
 
-    ASSERT(numPages <= memoryManager -> getNumFreeFrames()); //Check that we have enough physical memory to allocate
+    //Check that we at least have enough physical memory to allocate
+    ASSERT(numPages <= NumPhysPages);
+    if(numPages <= memoryManager -> getNumFreeFrames())    
+        this->pid = processManager->allocPid();
+    else
+        this->pid = DOES_NOT_EXIT;
 
     DEBUG('a', "Initializing address space, num pages %d, size %d\n",
           numPages, size);
@@ -97,9 +102,6 @@ AddrSpace::AddrSpace(OpenFile *executable)
         // pages to be read-only
     }
     memoryManager->lock->Release();
-    
-    // Get Pid assoc. with addr space
-    this->pid = processManager->allocPid();
 
     // zero out the needed space, to zero the unitialized data segment
     // and the stack segment
