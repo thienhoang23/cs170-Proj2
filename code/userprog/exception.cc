@@ -128,18 +128,19 @@ void doExit()
 {
     //Get status code
     int status = machine->ReadRegister(4);
-
     //Set the exit status in the PCB of this process 
     int curPID = currentThread->space->getpid();
     PCB* curPCB = processManager -> getPCB(curPID);
     curPCB->setExitStatus(status);
-    //fprintf(stderr, "Process %d exits with %d\n", curPID, status);
 
-    //Also let other processes  know this process  exits.
+    //Also let other processes know this process  exits.
+    fprintf(stderr, "Process  %d is broadcasting exit\n", currentThread -> space -> getpid());    
+    processManager -> broadcastExit(curPID);
 
-
-   //Clean up the space of this process
+    //Clean up the space of this process
+    //fprintf(stderr, "Freeing addr space of  %d\n", currentThread -> space -> getpid());    
     delete currentThread->space;
+    //fprintf(stderr, "Done Freeing");
     currentThread->space = NULL;
     
     //Terminate the current Nacho thread
@@ -172,7 +173,9 @@ int doExec()
     PCB *childPcb;
     int parentPid, childPid;
     OpenFile *execFile;
-
+    AddrSpace* childSpace;
+    Thread* childThread;
+    
     // First, we need to read the filename of the program to execute out of
     // user memory. This is complicated by the fact that the name might lie
     // across a page boundary.
@@ -197,26 +200,30 @@ int doExec()
 
     *kernelPtr = '\0';
 
-    // Next we need to create a PCB for the new process. The PCB must be
-    // initialized with the parent's PID (i.e. that of the current process)
-    // and the newly created child's PID.
-    parentPid = 0;
-    processManager -> lock -> Acquire();
-    childPid = processManager -> allocPid();
-    processManager -> lock -> Release();
-    childPcb = new PCB(parentPid, childPid);
-
     // The new process needs a kernel thread by which we can manage its state
-    childPcb->thread = new Thread("child of Exec()");
+    childThread = new Thread("child of Exec()");
 
     // Finally it needs an address space. We will initialize the address
     // space by loading in the program found in the executable file that was
     // passed in as the first argument.
     execFile = fileSystem->Open(filename);
-    childPcb->thread->space = new AddrSpace(execFile);
+    childSpace = new AddrSpace(execFile);
 
+    // Next we need to create a PCB for the new process. The PCB must be
+    // initialized with the parent's PID (i.e. that of the current process)
+    // and the newly created child's PID.
+    parentPid = currentThread -> space -> getpid();
+    childPid = childSpace -> getpid();    
+    childPcb = new PCB(parentPid, childPid);
+
+    childThread -> space = childSpace;
+    childPcb -> thread = childThread;
+    
     delete execFile;
 
+    // Keep track of PCB
+    processManager -> trackPCB(childPcb->thread->space->getpid(), childPcb);
+    
     // We launch the process with the kernel threads Fork() function. Note
     // that this is different from our implementation of Fork()!
     childPcb->thread->Fork(execLauncher, 0);
@@ -299,7 +306,7 @@ SpaceId doFork()
     //fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
 
     PCB *childPcb = new PCB(parentPid, childPid);
-    processManager->trackPcb(childPid, childPcb);
+    processManager-> trackPCB(childPid, childPcb);
     childPcb -> thread = child_Thread;
     childPcb -> thread -> space = dupAddrSpace;
     // New thread runs a dummy function creates a bridge for execution of the user function
@@ -327,19 +334,25 @@ void ForkBridge(int newProcessPC)
 
 void doYield()
 {
-    currentThread->SaveUserState();
-    //This kernel thread yields
-    currentThread->Yield();
-    //Now this process is resumed for execution after yielding.
-    //Restore the corresponding user process's states (both registers and page table)
-    //Save the corresponding user process's register states.
-    currentThread->RestoreUserState();
+  currentThread->SaveUserState();
+  //This kernel thread yields
+  currentThread->Yield();
+  //Now this process is resumed for execution after yielding.
+  //Restore the corresponding user process's states (both registers and page table)
+  //Save the corresponding user process's register states.
+  currentThread->RestoreUserState();
 }
 
 
 int doJoin()
 {
-    //Read the child Process Id
+    // Read the child Process Id
     int childPID = machine->ReadRegister(4);
-    processManager->waitFor(childPID);
+    // Wait for child Process to Finish and get exitStatus
+    int childExitStatus = processManager->waitFor(childPID);
+    // Deallocate memory if currentThread is the parent Thread
+    if( currentThread -> space -> getpid() == processManager -> getPCB(childPID) -> parentPid )
+        processManager->freePid(childPID);
+    // Return exit status
+    return childExitStatus;
 }

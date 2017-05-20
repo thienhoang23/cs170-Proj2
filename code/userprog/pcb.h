@@ -9,6 +9,7 @@
 class Thread;
 
 #define NOT_FINISHED -1
+#define NO_PARENT_PID -1
 
 class PCB {
 

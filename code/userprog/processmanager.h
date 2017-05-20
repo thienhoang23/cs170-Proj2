@@ -19,12 +19,14 @@ public:
     ~ProcessManager();
 
     int allocPid();         			// Allocate a new PID
-    void trackPcb(int pid, PCB *pcb);	// Allocate the accompany PCB to pid
+    void trackPCB(int pid, PCB *pcb);	// Allocate the accompany PCB to pid
     void freePid(int pid);  			// Free an allocated PID
     PCB* getPCB(int pid);
     int getNumPidAvail(){ return pids->NumClear();}
 
-    void waitFor(int childPID);
+    int waitFor(int childPID);
+
+    void broadcastExit(int pid);
 
     Lock *lock;
 
@@ -33,7 +35,6 @@ private:
     PCB **PCB_list;						// Table to keep track of PCBs
     Condition **exitSignals;            // Table to help broadcast exit signal
     Lock **exitLocks;                   // Accompanying Lock for CV
-    int* wait_counts;                   // Keeping Track of how many processes waiting for exit code
 };
 
 #endif // PROCESSMANAGER_H

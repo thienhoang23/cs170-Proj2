@@ -13,6 +13,7 @@
 #include "console.h"
 #include "addrspace.h"
 #include "synch.h"
+#include "pcb.h"
 
 //----------------------------------------------------------------------
 // StartProcess
@@ -25,14 +26,19 @@ StartProcess(char *filename)
 {
     OpenFile *executable = fileSystem->Open(filename);
     AddrSpace *space;
-
     if (executable == NULL) {
         printf("Unable to open file %s\n", filename);
         return;
     }
     space = new AddrSpace(executable);
     currentThread->space = space;
-
+    
+    int curPID = space -> getpid();
+    int parPID = NO_PARENT_PID;
+    PCB *pcb = new PCB(curPID, parPID);
+    pcb -> thread = currentThread;
+    processManager -> trackPCB(curPID, pcb);
+    
     delete executable;			// close file
 
     space->InitRegisters();		// set the initial register values
@@ -40,8 +46,8 @@ StartProcess(char *filename)
 
     machine->Run();			// jump to the user progam
     ASSERT(FALSE);			// machine->Run never returns;
-    // the address space exits
-    // by doing the syscall "exit"
+                            // the address space exits
+                            // by doing the syscall "exit"
 }
 
 // Data structures needed for the console test.  Threads making

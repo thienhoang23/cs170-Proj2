@@ -37,11 +37,9 @@ public:
 
     int Translate(int virtualAddr);     // Return the physical memory address
                                         // mapped by a virtual address
-    void setpid(int pid){this->pid = pid;}
-
-    int getpid(){ return pid; }
-
     unsigned int getNumPages(){ return numPages; }
+
+    int getpid(){return pid;}
 
 private:
     TranslationEntry *pageTable;	    // Assume linear page table translation

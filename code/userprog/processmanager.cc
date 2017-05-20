@@ -2,7 +2,7 @@
 //
 
 #include "processmanager.h"
-#include <string>
+
 //----------------------------------------------------------------------
 // ProcessManager::ProcessManager
 //  Create a new process manager to manager MAX_PROCESSES processes.
@@ -14,14 +14,12 @@ ProcessManager::ProcessManager()
     lock = new Lock("ProcessManagerLock");
     PCB_list = new PCB*[MAX_PROCESSES];
     exitLocks = new Lock*[MAX_PROCESSES];
-    exitSignals new Condition*[MAX_PROCESSES];
-    wait_counts = new int[MAX_PROCESSES];
+    exitSignals = new Condition*[MAX_PROCESSES];
 
     for(int i = 0; i < MAX_PROCESSES; i++){
-    	PCB_list[i] = NULL;
-        exitLocks[i] = new Lock(std::to_string(i));
-        exitSignals[i] = new Condition(std::to_string(i));
-        wait_counts[i] = 0;
+        PCB_list[i] = NULL;
+        exitLocks[i] = new Lock("Exit Lock");
+        exitSignals[i] = new Condition("Exit Signal");
     }
 }
 
@@ -34,13 +32,12 @@ ProcessManager::~ProcessManager()
 {
     delete pids;
     for(int i = 0; i < MAX_PROCESSES; i++){
-        if PCB_list[i] != NULL
+        if(PCB_list[i] != NULL)
             delete PCB_list[i];
         delete exitLocks[i];
         delete exitSignals[i];
     }
     delete lock;
-    delete[] wait_counts;
 }
 
 //----------------------------------------------------------------------
@@ -62,7 +59,7 @@ int ProcessManager::allocPid()
 //
 //----------------------------------------------------------------------
 
-void ProcessManager::trackPcb(int pid, PCB *pcb)
+void ProcessManager::trackPCB(int pid, PCB *pcb)
 {
 	this->PCB_list[pid] = pcb;
 }
@@ -98,13 +95,25 @@ PCB* ProcessManager::getPCB(int pid)
 //
 //----------------------------------------------------------------------
 
-void ProcessManager::waitFor(int childPID)
+int ProcessManager::waitFor(int childPID)
 {
+    int exitStatus;
     exitLocks[childPID] -> Acquire();
     while(PCB_list[childPID]->getExitStatus() == NOT_FINISHED){
-        wait_counts[childPID]++;
-        Condition[childPID] -> Wait(exitLocks[childPID]);
-        wait_counts[childPID]--;
+        exitSignals[childPID] -> Wait(exitLocks[childPID]);
     }
-     exitLocks[childPID] -> Release();
+    exitStatus = PCB_list[childPID]->getExitStatus();
+    exitLocks[childPID] -> Release();
+    return exitStatus;
+}
+
+//----------------------------------------------------------------------
+// ProcessManager::broadcastExit
+//  Let other process know that I am exiting
+//
+//----------------------------------------------------------------------
+
+void ProcessManager::broadcastExit(int pid)
+{
+    exitSignals[pid] -> Broadcast(exitLocks[pid]);
 }
