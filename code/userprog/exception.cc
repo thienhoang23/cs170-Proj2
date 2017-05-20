@@ -38,11 +38,18 @@
 SpaceId doFork();
 void ForkBridge(int newProcessPC);
 void doExit();
-int doExec();
-void doWrite();
+int doExec(char* filename);
 void doYield();
 int doJoin();
-
+// Part 2
+void doCreate();
+int doOpen();
+void doWrite();
+int doRead();
+void doClose();
+// Helper Functions to help moving memory from user space to kernel space
+void readFilenameFromUsertoKernel(char* filename);
+int moveBytesFromMemToKernel(int virtAddr, char* buffer, int size);
 //----------------------------------------------------------------------
 // ExceptionHandler
 //  Entry point into the Nachos kernel.  Called when a user program
@@ -70,6 +77,7 @@ void
 ExceptionHandler(ExceptionType which)
 {
     int result, type = machine->ReadRegister(2);
+    char* filename = new char[MAX_FILENAME];
 
     if (which == SyscallException) {
         switch (type) {
@@ -88,7 +96,8 @@ ExceptionHandler(ExceptionType which)
                 break;
             case SC_Exec:
                 DEBUG('a', "Exec() system call invoked.\n");
-                result = doExec();
+                readFilenameFromUsertoKernel(filename);
+                result = doExec(filename);
                 machine->WriteRegister(2, result);
                 break;
             case SC_Yield:
@@ -100,9 +109,27 @@ ExceptionHandler(ExceptionType which)
                 result = doJoin();
                 machine->WriteRegister(2, result);
                 break;
+            case SC_Create:
+                DEBUG('a', "Create() system call invoked.\n");
+                doCreate();
+                break;
+            case SC_Open:
+                DEBUG('a', "Open() system call invoked.\n");
+                result = doOpen();
+                machine->WriteRegister(2, result);
+                break;
+            case SC_Read:
+                DEBUG('a', "Read() system call invoked.\n");
+                result = doRead();
+                machine->WriteRegister(2, result);
+                break;
             case SC_Write:
                 DEBUG('a', "Write() system call invoked.\n");
                 doWrite();
+                break;
+            case SC_Close:
+                DEBUG('a', "Close() system call invoked.\n");
+                doClose();
                 break;
             default:
                 printf("Unexpected system call %d. Halting.\n", type);
@@ -168,42 +195,13 @@ void execLauncher(int unused)
 // doExec
 //----------------------------------------------------------------------
 
-int doExec()
+int doExec(char* filename)
 {
-    int filenameVirtAddr = machine->ReadRegister(4);
-    int filenamePhysAddr, bytesCopied = 0;
-    char *filename = new char [MAX_FILENAME + 1], *kernelPtr = filename;
-    char *userPtr, *endOfPage;
-
     PCB *childPcb;
     int parentPid, childPid;
     OpenFile *execFile;
     AddrSpace* childSpace;
     Thread* childThread;
-
-    // First, we need to read the filename of the program to execute out of
-    // user memory. This is complicated by the fact that the name might lie
-    // across a page boundary.
-    do {
-
-        // Find this portion of filename in physical memory
-        filenameVirtAddr += bytesCopied;
-        filenamePhysAddr = currentThread->space->Translate(filenameVirtAddr);
-        userPtr = machine->mainMemory + filenamePhysAddr;
-
-        // Find the end of the page
-        endOfPage = machine->mainMemory + (filenamePhysAddr / PageSize + 1)
-                                           * PageSize;
-
-        // Copy characters until the string or page ends
-        while (*userPtr != '\0' && userPtr != endOfPage) {
-            *kernelPtr++ = *userPtr++;
-            ++bytesCopied;
-        }
-
-    } while (*userPtr != '\0' && bytesCopied != 0);
-
-    *kernelPtr = '\0';
 
     // Finally it needs an address space. We will initialize the address
     // space by loading in the program found in the executable file that was
@@ -247,49 +245,6 @@ int doExec()
     // implementation once you implement multiple address spaces.
     doYield();
     return childPid;
-}
-
-//----------------------------------------------------------------------
-// doWrite
-//----------------------------------------------------------------------
-
-void doWrite()
-{
-    int userBufVirtAddr = machine->ReadRegister(4);
-    int userBufSize = machine->ReadRegister(5);
-    int dstFile = machine->ReadRegister(6);
-
-    int i, userBufPhysAddr, bytesToEndOfPage, bytesToCopy, bytesCopied = 0;
-    char *kernelBuf = new char[userBufSize + 1];
-
-    if (dstFile == ConsoleOutput) {
-
-        // Copy bytes from user memory into kernel memory
-        while (bytesCopied < userBufSize) {
-
-            // Perform virtual to physical address translation
-            userBufPhysAddr = currentThread->space->Translate(userBufVirtAddr + bytesCopied);
-
-            // Determine how many bytes we can read from this page
-            bytesToEndOfPage = PageSize - userBufPhysAddr % PageSize;
-            if (userBufSize < bytesToEndOfPage)
-                bytesToCopy = userBufSize;
-            else
-                bytesToCopy = bytesToEndOfPage;
-
-            // Copy bytes into kernel buffer
-            memcpy(&kernelBuf[bytesCopied], &machine->mainMemory[userBufPhysAddr], bytesToCopy);
-            bytesCopied += bytesToCopy;
-        }
-
-        // Write buffer to console (writes should be atomic)
-        openFileManager->consoleWriteLock->Acquire();
-        for (i = 0; i < userBufSize; ++i)
-            UserConsolePutChar(kernelBuf[i]);
-        openFileManager->consoleWriteLock->Release();
-    }
-
-    delete[] kernelBuf;
 }
 
 SpaceId doFork()
@@ -362,4 +317,139 @@ int doJoin()
     int childExitStatus = processManager->waitFor(childPID, currentThread->space->getpid());
     // Return exit status
     return childExitStatus;
+}
+
+/*
+----------------------------PART 2: File Sys Call-----------------------
+*/
+
+//----------------------------------------------------------------------
+// doCreate
+//----------------------------------------------------------------------
+
+void doCreate()
+{
+    
+}
+
+//----------------------------------------------------------------------
+// doOpen
+//----------------------------------------------------------------------
+
+int doOpen()
+{
+    //Stub
+    return -1;
+}
+
+
+//----------------------------------------------------------------------
+// doRead
+//----------------------------------------------------------------------
+
+int doRead()
+{
+    //STUB
+    return -1;
+}
+
+
+//----------------------------------------------------------------------
+// doWrite
+//----------------------------------------------------------------------
+
+void doWrite()
+{
+    int userBufVirtAddr = machine->ReadRegister(4);
+    int userBufSize = machine->ReadRegister(5);
+    int dstFile = machine->ReadRegister(6);
+
+    int i, userBufPhysAddr, bytesToEndOfPage, bytesToCopy, bytesCopied = 0;
+    char *kernelBuf = new char[userBufSize + 1];
+
+    if (dstFile == ConsoleOutput) {
+
+        // Copy bytes from user memory into kernel memory
+        while (bytesCopied < userBufSize) {
+
+            // Perform virtual to physical address translation
+            userBufPhysAddr = currentThread->space->Translate(userBufVirtAddr + bytesCopied);
+
+            // Determine how many bytes we can read from this page
+            bytesToEndOfPage = PageSize - userBufPhysAddr % PageSize;
+            if (userBufSize < bytesToEndOfPage)
+                bytesToCopy = userBufSize;
+            else
+                bytesToCopy = bytesToEndOfPage;
+
+            // Copy bytes into kernel buffer
+            memcpy(&kernelBuf[bytesCopied], &machine->mainMemory[userBufPhysAddr], bytesToCopy);
+            bytesCopied += bytesToCopy;
+        }
+
+        // Write buffer to console (writes should be atomic)
+        openFileManager->consoleWriteLock->Acquire();
+        for (i = 0; i < userBufSize; ++i)
+            UserConsolePutChar(kernelBuf[i]);
+        openFileManager->consoleWriteLock->Release();
+    }
+
+    delete[] kernelBuf;
+}
+
+//----------------------------------------------------------------------
+// doClose
+//----------------------------------------------------------------------
+
+void doClose()
+{
+    
+}
+
+
+
+/*
+---------------------------- Helper Functions -----------------------
+*/
+
+//----------------------------------------------------------------------
+// Helper function to bring a string that represents a filename from 
+// user space to kernel space.
+//----------------------------------------------------------------------
+
+void readFilenameFromUsertoKernel(char* filename) {
+
+    int currPosition = 0;
+    int filenameArg = machine->ReadRegister(4);
+
+    do {
+        moveBytesFromMemToKernel(filenameArg, filename + currPosition, 1);
+        filenameArg++;
+    } while (filename[currPosition++] != 0);
+
+    filename[currPosition] = 0; // terminate C string
+}
+
+//----------------------------------------------------------------------
+// Helper function that brings bytes from memory to kernel space.
+//----------------------------------------------------------------------
+
+int moveBytesFromMemToKernel(int virtAddr, char* buffer, int size) {
+
+    int physAddr = 0;
+    int remainingFromPage = 0;
+    int bytesCopied = 0;
+    int bytesToCopy = 0;
+    
+    while (size > 0) {
+        physAddr = currentThread->space->Translate(virtAddr);
+        remainingFromPage = PageSize - physAddr % PageSize;
+        bytesToCopy = remainingFromPage < size ? remainingFromPage : size;
+        bcopy(machine->mainMemory + physAddr, buffer + bytesCopied, bytesToCopy);
+        size -= bytesToCopy;
+        bytesCopied += bytesToCopy;
+        virtAddr += bytesToCopy;
+    }
+
+    return bytesCopied;
 }
