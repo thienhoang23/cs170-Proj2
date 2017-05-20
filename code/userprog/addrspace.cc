@@ -79,10 +79,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
     numPages = divRoundUp(size, PageSize);
     size = numPages * PageSize;
 
-    ASSERT(numPages <= NumPhysPages);   // check we're not trying
-                                        // to run anything too big --
-                                        // at least until we have
-                                        // virtual memory
+    ASSERT(numPages <= memoryManager -> getNumFreeFrames()); //Check that we have enough physical memory to allocate
 
     DEBUG('a', "Initializing address space, num pages %d, size %d\n",
           numPages, size);

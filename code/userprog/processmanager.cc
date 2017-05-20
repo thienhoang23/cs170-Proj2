@@ -74,7 +74,8 @@ void ProcessManager::trackPCB(int pid, PCB *pcb)
 void ProcessManager::freePid(int pid)
 {
 	pids -> Clear(pid);
-	delete PCB_list[pid];
+    if(PCB_list[pid] != NULL)
+    	delete PCB_list[pid];
 	PCB_list[pid] = NULL; 
 }
 

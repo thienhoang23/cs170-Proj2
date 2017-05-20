@@ -16,5 +16,5 @@ void print(char *s)
 
 main()
 {
-	print("Greetings from exec1.c\n");
+  print("Greetings from exec1.c\n");
 }

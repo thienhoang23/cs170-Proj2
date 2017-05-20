@@ -25,6 +25,7 @@ public:
     ~MemoryManager();
     int allocFrame();           // allokbcate a free frame to a process
     void freeFrame(int frame);  // free an allocated frame
+    int getNumFreeFrames() { return frames->NumClear();}
 
     Lock *lock;
 

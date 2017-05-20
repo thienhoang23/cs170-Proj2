@@ -16,10 +16,10 @@ void print(char *s)
 
 main()
 {
-	print("About to Exec() some stuff...\n");
-	Exec("exec1", 0, 0, 0);
-	Exec("exec2", 0, 0, 0);
-	Exec("exec3", 0, 0, 0);
-	print("Preparing to Halt()...\n");
-	//Halt();
+  //print("About to Exec() some stuff...\n");
+  Exec("exec1", 0, 0, 0);
+  Exec("exec2", 0, 0, 0);
+  Exec("exec3", 0, 0, 0);
+  //print("Preparing to Halt()...\n");
+  //Halt();
 }

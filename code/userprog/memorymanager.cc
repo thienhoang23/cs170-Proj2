@@ -35,7 +35,13 @@ MemoryManager::~MemoryManager()
 
 int MemoryManager::allocFrame()
 {
-    return frames -> Find();
+    int frameIndex = frames -> Find();
+    if (frameIndex == -1){
+    	DEBUG('m', "Unable to find a page from the page table.");
+        ASSERT(FALSE);
+    } else {
+        return frameIndex;
+    }	
 }
 
 //----------------------------------------------------------------------

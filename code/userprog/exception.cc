@@ -153,9 +153,8 @@ void doExit()
 
 void execLauncher(int unused)
 {
-    AddrSpace *curAddrSpace = currentThread->space;
-    curAddrSpace->InitRegisters();
-    curAddrSpace->RestoreState();
+    currentThread->space->InitRegisters();
+    currentThread->space->RestoreState();
     machine->Run();
 }
 
@@ -175,7 +174,7 @@ int doExec()
     OpenFile *execFile;
     AddrSpace* childSpace;
     Thread* childThread;
-    
+
     // First, we need to read the filename of the program to execute out of
     // user memory. This is complicated by the fact that the name might lie
     // across a page boundary.
@@ -207,35 +206,35 @@ int doExec()
     // space by loading in the program found in the executable file that was
     // passed in as the first argument.
     execFile = fileSystem->Open(filename);
+    if (execFile == NULL) {
+        fprintf(stderr, "Unable to open file %s for execution. Terminating.\n", filename);
+        return -1;
+    }
+
     childSpace = new AddrSpace(execFile);
 
-    // Next we need to create a PCB for the new process. The PCB must be
-    // initialized with the parent's PID (i.e. that of the current process)
-    // and the newly created child's PID.
+    // Initialize new PCB
+    childPid = childSpace -> getpid();
     parentPid = currentThread -> space -> getpid();
-    childPid = childSpace -> getpid();    
-    childPcb = new PCB(parentPid, childPid);
+    childPcb = new PCB(childPid, parentPid);
 
+    processManager -> trackPCB(childPid, childPcb);
+
+    // Link everything together
     childThread -> space = childSpace;
     childPcb -> thread = childThread;
     
     delete execFile;
-
-    // Keep track of PCB
-    processManager -> trackPCB(childPcb->thread->space->getpid(), childPcb);
     
     // We launch the process with the kernel threads Fork() function. Note
     // that this is different from our implementation of Fork()!
     childPcb->thread->Fork(execLauncher, 0);
 
-
     // Because we just overwrote the current thread's address space when we
     // called `new AddrSpace(execFile)` it can no longer be allowed to
     // execute so we call Finish(). You will have to fix this in your
     // implementation once you implement multiple address spaces.
-    currentThread->Finish();
-
-    // We shouldn't reach this point in the code...
+    doYield();
     return childPid;
 }
 
@@ -285,7 +284,7 @@ void doWrite()
 SpaceId doFork()
 {
     // Sanity Check
-    if (currentThread->space->getNumPages() > NumPhysPages || 
+    if (currentThread->space->getNumPages() > memoryManager->getNumFreeFrames() || 
         processManager->getNumPidAvail() <= 0)
         return -1;
 
