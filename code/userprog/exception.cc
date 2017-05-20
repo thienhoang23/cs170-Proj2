@@ -142,8 +142,14 @@ void doExit()
     delete currentThread->space;
     //fprintf(stderr, "Done Freeing");
     currentThread->space = NULL;
+
+    //Wait for Children to Finish to Deallocate all the resources
+    processManager->waitForChildrenToFinish(curPID);
     
-    //Terminate the current Nacho thread
+    //If got to here, then we can know all children have finished, now we can finish or Halt
+    fprintf(stderr, "Process %d exiting\n", curPID);
+    if(curPID == 0)
+        interrupt->Halt();
     currentThread->Finish();
 }
 
@@ -234,7 +240,7 @@ int doExec()
     // We launch the process with the kernel threads Fork() function. Note
     // that this is different from our implementation of Fork()!
     childPcb->thread->Fork(execLauncher, 0);
-
+    fprintf(stderr, "Process %d exec-ing process %d\n", parentPid, childPid);
     // Because we just overwrote the current thread's address space when we
     // called `new AddrSpace(execFile)` it can no longer be allowed to
     // execute so we call Finish(). You will have to fix this in your
@@ -307,9 +313,9 @@ SpaceId doFork()
     parentPid = currentThread->space->getpid();
     childPid = dupAddrSpace->getpid();
 
-    //fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
+    fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
 
-    PCB *childPcb = new PCB(parentPid, childPid);
+    PCB *childPcb = new PCB(childPid, parentPid);
     processManager-> trackPCB(childPid, childPcb);
     childPcb -> thread = child_Thread;
     childPcb -> thread -> space = dupAddrSpace;
@@ -353,10 +359,7 @@ int doJoin()
     // Read the child Process Id
     int childPID = machine->ReadRegister(4);
     // Wait for child Process to Finish and get exitStatus
-    int childExitStatus = processManager->waitFor(childPID);
-    // Deallocate memory if currentThread is the parent Thread
-    if( currentThread -> space -> getpid() == processManager -> getPCB(childPID) -> parentPid )
-        processManager->freePid(childPID);
+    int childExitStatus = processManager->waitFor(childPID, currentThread->space->getpid());
     // Return exit status
     return childExitStatus;
 }

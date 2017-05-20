@@ -24,7 +24,8 @@ public:
     PCB* getPCB(int pid);
     int getNumPidAvail(){ return pids->NumClear();}
 
-    int waitFor(int childPID);
+    int waitFor(int childPID, int parentPID);
+    void waitForChildrenToFinish(int parentPID);
 
     void broadcastExit(int pid);
 

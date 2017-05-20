@@ -96,14 +96,19 @@ PCB* ProcessManager::getPCB(int pid)
 //
 //----------------------------------------------------------------------
 
-int ProcessManager::waitFor(int childPID)
+int ProcessManager::waitFor(int childPID, int parentPID)
 {
     int exitStatus;
     exitLocks[childPID] -> Acquire();
+    fprintf(stderr, "Process %d starts waiting for process %d\n", parentPID, childPID);
     while(PCB_list[childPID]->getExitStatus() == NOT_FINISHED){
         exitSignals[childPID] -> Wait(exitLocks[childPID]);
     }
     exitStatus = PCB_list[childPID]->getExitStatus();
+    fprintf(stderr, "Process %d finishes waiting for process %d\n", parentPID, childPID);
+    // Deallocate memory if currentThread is the parent Thread
+    if( parentPID == PCB_list[childPID] -> parentPid )
+        freePid(childPID);
     exitLocks[childPID] -> Release();
     return exitStatus;
 }
@@ -111,10 +116,25 @@ int ProcessManager::waitFor(int childPID)
 //----------------------------------------------------------------------
 // ProcessManager::broadcastExit
 //  Let other process know that I am exiting
-//
 //----------------------------------------------------------------------
 
 void ProcessManager::broadcastExit(int pid)
 {
+    exitLocks[pid] -> Acquire();
     exitSignals[pid] -> Broadcast(exitLocks[pid]);
+    exitLocks[pid] -> Release();
+}
+
+//----------------------------------------------------------------------
+// ProcessManager::waitForChildrenToFinish
+//  Wait for All Children to finish
+//----------------------------------------------------------------------
+
+void ProcessManager::waitForChildrenToFinish(int parentPID)
+{
+    for(int i = 0; i < MAX_PROCESSES; i++){
+        if(PCB_list[i] != NULL && PCB_list[i] -> parentPid == parentPID){
+            waitFor(i, parentPID);
+        }
+    }
 }
