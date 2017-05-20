@@ -133,10 +133,6 @@ void doExit()
     PCB* curPCB = processManager -> getPCB(curPID);
     curPCB->setExitStatus(status);
 
-    //Also let other processes know this process  exits.
-    //fprintf(stderr, "Process  %d is broadcasting exit\n", currentThread -> space -> getpid());    
-    processManager -> broadcastExit(curPID);
-
     //Clean up the space of this process
     //fprintf(stderr, "Freeing addr space of  %d\n", currentThread -> space -> getpid());    
     delete currentThread->space;
@@ -147,6 +143,10 @@ void doExit()
     processManager->waitForChildrenToFinish(curPID);
     
     //If got to here, then we can know all children have finished, now we can finish or Halt
+
+    //Let other processes know this process  exits.
+    processManager -> broadcastExit(curPID);
+
     fprintf(stderr, "Process %d exiting\n", curPID);
     if(curPID == 0)
         interrupt->Halt();
