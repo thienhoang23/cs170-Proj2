@@ -34,6 +34,7 @@
 #include "../filesys/openfile.h"
 
 #define MAX_FILENAME 256
+#define INITIAL_FILE_SIZE 1024 //This can be anything since the underlying structure is Linux
 
 SpaceId doFork();
 void ForkBridge(int newProcessPC);
@@ -42,8 +43,8 @@ int doExec(char* filename);
 void doYield();
 int doJoin();
 // Part 2
-void doCreate();
-int doOpen();
+void doCreate(char* filename);
+int doOpen(char* filename);
 void doWrite();
 int doRead();
 void doClose();
@@ -109,13 +110,16 @@ ExceptionHandler(ExceptionType which)
                 result = doJoin();
                 machine->WriteRegister(2, result);
                 break;
+            //PART 2
             case SC_Create:
                 DEBUG('a', "Create() system call invoked.\n");
-                doCreate();
+                readFilenameFromUsertoKernel(filename);
+                doCreate(filename);
                 break;
             case SC_Open:
                 DEBUG('a', "Open() system call invoked.\n");
-                result = doOpen();
+                readFilenameFromUsertoKernel(filename);
+                result = doOpen(filename);
                 machine->WriteRegister(2, result);
                 break;
             case SC_Read:
@@ -327,19 +331,23 @@ int doJoin()
 // doCreate
 //----------------------------------------------------------------------
 
-void doCreate()
+void doCreate(char* filename)
 {
-    
+    bool success = fileSystem->Create(filename)
+    // if(success)
+    //     fprintf(stderr, "Process %d creates %s\n", currentThread -> space -> getpid(), filename);
+    // else
+    //     fprintf(stderr, "Process %d fails to create %s\n", currentThread -> space -> getpid(), filename);
 }
 
 //----------------------------------------------------------------------
 // doOpen
 //----------------------------------------------------------------------
 
-int doOpen()
+int doOpen(char* filename)
 {
-    //Stub
-    return -1;
+    OpenFile* file = fileSystem->Open(filename);
+    
 }
 
 

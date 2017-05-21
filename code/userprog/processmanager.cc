@@ -37,6 +37,9 @@ ProcessManager::~ProcessManager()
         delete exitLocks[i];
         delete exitSignals[i];
     }
+    delete[] PCB_list;
+    delete[] exitLocks;
+    delete[] exitSignals;
     delete lock;
 }
 

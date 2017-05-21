@@ -19,6 +19,12 @@ OpenFileManager::OpenFileManager()
 
 OpenFileManager::~OpenFileManager()
 {
+    for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
+		if (openFileTable[i] != NULL){
+			delete openFileTable[i];
+		}
+	}
+	delete[] openFileTable;
     delete consoleWriteLock;
 }
 
@@ -27,9 +33,15 @@ OpenFileManager::~OpenFileManager()
 //  Adds an on open file to the system file table.
 //----------------------------------------------------------------------
 
-int OpenFileManager::addOpenFile(SysOpenFile openFile)
+int OpenFileManager::addOpenFile(SysOpenFile* openFile)
 {
-    return 0;
+	for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
+		if (openFileTable[i] == NULL){
+			openFileTable[i] = openFile;
+			return i;
+		}
+	}
+	return FAILED_TO_ADD;
 }
 
 //----------------------------------------------------------------------
@@ -39,5 +51,7 @@ int OpenFileManager::addOpenFile(SysOpenFile openFile)
 
 SysOpenFile *OpenFileManager::getOpenFile(int index)
 {
-    return 0;
+	if(openFileTable[index] == NULL)
+		return FAILED_TO_FIND;
+	return openFileTable[index];
 }
