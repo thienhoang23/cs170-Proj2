@@ -2,6 +2,7 @@
 //
 
 #include "pcb.h"
+#include <cstddef>
 
 //----------------------------------------------------------------------
 // PCB::PCB
@@ -14,6 +15,7 @@ PCB::PCB(int pid, int parentPid)
     this->pid = pid;
     this->parentPid = parentPid;
     this->exitStatus = NOT_FINISHED;
+    this-> openFiles = new UserOpenFile*[MAX_OPEN_FILES];
     for(int i = 0; i < MAX_OPEN_FILES; i++){
     	openFiles[i] = NULL;
     }
@@ -60,11 +62,11 @@ void PCB::closeOpenFile(int fd)
 PCB* PCB::ForkHelper(int pid, int parentPid){
 	PCB* ChildPCB = new PCB(pid, parentPid);
 	for(int i = 0; i < MAX_OPEN_FILES; i++){
-		if(this -> openFiles == NULL){
+		if(this -> openFiles[i] == NULL){
 			ChildPCB -> openFiles[i] = NULL;
 		}
 		else{
-			ChildPCB -> openFiles[i] = new (this -> openFiles[i]);			
+			ChildPCB -> openFiles[i] = new UserOpenFile(this -> openFiles[i]);
 		}
 	}
 	return ChildPCB;

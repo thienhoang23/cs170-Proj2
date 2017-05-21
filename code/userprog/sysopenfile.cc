@@ -5,7 +5,7 @@
 
 SysOpenFile::SysOpenFile(OpenFile *file, int fileId, char* filename)
 {
-	this->OpenFile = file;
+	this->openFile = file;
 	this->fileId = fileId;
 	this->filename = filename;
 	this->numProcOpen = 1;

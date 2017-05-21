@@ -34,7 +34,7 @@ public:
     int parentPid;      	// Parent's Process ID
     Thread *thread;     	// Kernel thread that controls this process has the registers, 
     						// PC, and address_space
-    UserOpenFile* openFiles[MAX_OPEN_FILES];
+    UserOpenFile** openFiles;
 };
 
 #endif // PCB_H

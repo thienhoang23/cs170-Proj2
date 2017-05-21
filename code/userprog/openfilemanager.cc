@@ -48,7 +48,7 @@ int OpenFileManager::addOpenFile(OpenFile* openFile, char* filename)
 		}
 	}
 	else{
-		openFileTable[i]->numProcAccess++;
+		openFileTable[index]->numProcOpen++;
 		return index;
 	}
 	return FAILED_TO_ADD; //Should never get here; only here for compiler
@@ -62,7 +62,7 @@ int OpenFileManager::addOpenFile(OpenFile* openFile, char* filename)
 SysOpenFile *OpenFileManager::getOpenFile(int index)
 {
 	if(openFileTable[index] == NULL)
-		return FAILED_TO_FIND;
+		return NULL;
 	return openFileTable[index];
 }
 

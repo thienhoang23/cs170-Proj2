@@ -15,6 +15,7 @@ struct SysOpenFile {
     void reduceProcOpen();
 
     SysOpenFile(OpenFile* file, int fileId, char* filename);
+    ~SysOpenFile();
 };
 
 
