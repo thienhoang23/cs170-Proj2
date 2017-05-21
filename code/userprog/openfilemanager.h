@@ -17,13 +17,16 @@ public:
     OpenFileManager();
     ~OpenFileManager();
 
-    int addOpenFile(SysOpenFile* openFile);
+    int addOpenFile(OpenFile* openFile, char* filename);
     SysOpenFile *getOpenFile(int index);
+    void reduceProccessOpeningOf(int index);
 
     Lock *consoleWriteLock;
     
 private:
     SysOpenFile* openFileTable[OPEN_FILE_TABLE_SIZE];
+    int getIndexOf(OpenFile* file);
+    int used;
 };
 
 #endif // OPENFILEMANAGER_H

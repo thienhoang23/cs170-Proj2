@@ -274,7 +274,7 @@ SpaceId doFork()
 
     fprintf(stderr, "Process %d just forks process  %d\n", parentPid, childPid);
 
-    PCB *childPcb = new PCB(childPid, parentPid);
+    PCB *childPcb = processManager->getpcb(parentPid) -> ForkHelper(childPid, parentPid);
     processManager-> trackPCB(childPid, childPcb);
     childPcb -> thread = child_Thread;
     childPcb -> thread -> space = dupAddrSpace;
@@ -333,7 +333,7 @@ int doJoin()
 
 void doCreate(char* filename)
 {
-    bool success = fileSystem->Create(filename)
+    bool success = fileSystem->Create(filename, INITIAL_FILE_SIZE);
     // if(success)
     //     fprintf(stderr, "Process %d creates %s\n", currentThread -> space -> getpid(), filename);
     // else
@@ -346,8 +346,20 @@ void doCreate(char* filename)
 
 int doOpen(char* filename)
 {
+    UserOpenFile* userOpenFile;
+    int fd;
+
     OpenFile* file = fileSystem->Open(filename);
+    if(file == NULL){
+        fprintf(stderr, "%s not found\n", filename);
+        return -1;
+    }
     
+    int fileTableIndex = openFileManager -> addOpenFile(file, filename);
+    if(fileTableIndex == FAILED_TO_ADD) return -1;
+    userOpenFile = new UserOpenFile(filename, fileTableIndex, 0);
+    int fd = processManager->getPCB[currentThread->space->getpid()]->addOpenFile(userOpenFile);
+    return fd;
 }
 
 
@@ -411,7 +423,16 @@ void doWrite()
 
 void doClose()
 {
-    
+    int fd = machine->ReadRegister(4);
+    PCB* curPCB = processManager->getpcb(currentThread->space->getpid());
+    UserOpenFile* userOpenFile = curPCB->getOpenFile(fd);
+    if(userOpenFile == NULL){
+        fprintf(stderr, "Can't find file with fd %d in Process %d\n", fd, currentThread -> space -> getpid());
+        return;
+    }
+    int fileTableIndex = userOpenFile->fileTableIndex;
+    openFileManager -> reduceProccessOpeningOf(fileTableIndex);
+    curPCB -> closeOpenFile(fd);
 }
 
 

@@ -11,6 +11,7 @@
 OpenFileManager::OpenFileManager()
 {
    consoleWriteLock = new Lock("consoleWriteLock");
+   int used = 0;
 }
 
 //----------------------------------------------------------------------
@@ -33,15 +34,24 @@ OpenFileManager::~OpenFileManager()
 //  Adds an on open file to the system file table.
 //----------------------------------------------------------------------
 
-int OpenFileManager::addOpenFile(SysOpenFile* openFile)
+int OpenFileManager::addOpenFile(OpenFile* openFile, char* filename)
 {
-	for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
-		if (openFileTable[i] == NULL){
-			openFileTable[i] = openFile;
-			return i;
+	int index = getIndexOf(openFile);
+	if(index != FAILED_TO_FIND){
+		if(used == OPEN_FILE_TABLE_SIZE) return FAILED_TO_ADD;
+		for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
+			if(openFileTable[i] == NULL){
+				openFileTable[i] = new SysOpenFile(openFile, i, filename);
+				used++;
+				return i;
+			}
 		}
 	}
-	return FAILED_TO_ADD;
+	else{
+		openFileTable[i]->numProcAccess++;
+		return index;
+	}
+	return FAILED_TO_ADD; //Should never get here; only here for compiler
 }
 
 //----------------------------------------------------------------------
@@ -54,4 +64,35 @@ SysOpenFile *OpenFileManager::getOpenFile(int index)
 	if(openFileTable[index] == NULL)
 		return FAILED_TO_FIND;
 	return openFileTable[index];
+}
+
+//----------------------------------------------------------------------
+// OpenFileManager::getIndexOf
+//  Retrieves the index of file
+//----------------------------------------------------------------------
+
+int OpenFileManager::getIndexOf(OpenFile* file)
+{
+	for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
+		if (openFileTable[i] != NULL && openFileTable[i]->openFile == file){
+			return i;
+		}
+	}
+	return FAILED_TO_FIND;
+}
+
+//----------------------------------------------------------------------
+// OpenFileManager::reduceProccessOpeningOf
+//  Reduce the number of processes accessing an opened file.
+//	Deallocate if no longer needed
+//----------------------------------------------------------------------
+
+void OpenFileManager::reduceProccessOpeningOf(int index)
+{
+	openFileTable[index] -> reduceProcOpen();
+	if(openFileTable[index] -> numProcOpen == 0){
+		delete openFileTable[index];
+		used--;
+		openFileTable[index] = NULL;
+	}
 }
