@@ -51,6 +51,9 @@ void doClose();
 // Helper Functions to help moving memory from user space to kernel space
 void readFilenameFromUsertoKernel(char* filename);
 int moveBytesFromMemToKernel(int virtAddr, char* buffer, int size);
+int userRead(int virtAddr, char* buffer, int size);
+
+
 //----------------------------------------------------------------------
 // ExceptionHandler
 //  Entry point into the Nachos kernel.  Called when a user program
@@ -128,7 +131,7 @@ ExceptionHandler(ExceptionType which)
                 machine->WriteRegister(2, result);
                 break;
             case SC_Write:
-                DEBUG('a', "Write() system call invoked.\n");
+	      DEBUG('a', "Write() system call invoked.\n");
                 doWrite();
                 break;
             case SC_Close:
@@ -369,8 +372,40 @@ int doOpen(char* filename)
 
 int doRead()
 {
-    //STUB
-    return -1;
+  int userBufVirtAddr = machine->ReadRegister(4);
+  int userBufSize = machine->ReadRegister(5);
+  int dstFile = machine->ReadRegister(6);
+
+  int bytesRead = 0;
+  char* buf = new char[userBufSize + 1];
+  int actualBytesRead;
+  
+  if (dstFile == ConsoleInput) {
+    //use UserConsoleGetChar() from system.h to save data in internal buffer
+    //read until \n
+    while(bytesRead < userBufSize && UserConsoleGetChar() != '\n') {
+      buf[bytesRead] = UserConsoleGetChar();
+      bytesRead++;
+    }
+  }
+  else {
+    //find current read offset
+    //use openFile::ReadAt in openFile.h to read data
+    int curPID = currentThread->space->getpid();
+    UserOpenFile* userFile = processManager->getPCB(curPID)->getOpenFile(dstFile);
+    OpenFile* ofile = openFileManager->getOpenFile(userFile->fileTableIndex)->openFile;
+
+    //openFileManager->consoleReadLock[userFile->fileTableIndex]->Acquire();
+    actualBytesRead = ofile->ReadAt(buf, userBufSize, userFile->currentPosition);
+    userFile->currentPosition += actualBytesRead;
+    //openFileManager->consoleReadLock[userFile->fileTableIndex]->Release();
+  }
+
+  //copy data from internal buffer to destination memory location
+  //copy one byte by one
+  actualBytesRead = userRead(userBufVirtAddr, buf, userBufSize);
+  delete[] buf;
+  return actualBytesRead;
 }
 
 
@@ -380,41 +415,41 @@ int doRead()
 
 void doWrite()
 {
-    int userBufVirtAddr = machine->ReadRegister(4);
-    int userBufSize = machine->ReadRegister(5);
-    int dstFile = machine->ReadRegister(6);
+  int userBufVirtAddr = machine->ReadRegister(4);
+  int userBufSize = machine->ReadRegister(5);
+  int dstFile = machine->ReadRegister(6);
+  int actualBytesWritten = 0;
+  
+  //allocate internal buffer
+  char* internalBuf = new char[userBufSize + 1];
 
-    int i, userBufPhysAddr, bytesToEndOfPage, bytesToCopy, bytesCopied = 0;
-    char *kernelBuf = new char[userBufSize + 1];
-
-    if (dstFile == ConsoleOutput) {
-
-        // Copy bytes from user memory into kernel memory
-        while (bytesCopied < userBufSize) {
-
-            // Perform virtual to physical address translation
-            userBufPhysAddr = currentThread->space->Translate(userBufVirtAddr + bytesCopied);
-
-            // Determine how many bytes we can read from this page
-            bytesToEndOfPage = PageSize - userBufPhysAddr % PageSize;
-            if (userBufSize < bytesToEndOfPage)
-                bytesToCopy = userBufSize;
-            else
-                bytesToCopy = bytesToEndOfPage;
-
-            // Copy bytes into kernel buffer
-            memcpy(&kernelBuf[bytesCopied], &machine->mainMemory[userBufPhysAddr], bytesToCopy);
-            bytesCopied += bytesToCopy;
-        }
-
-        // Write buffer to console (writes should be atomic)
-        openFileManager->consoleWriteLock->Acquire();
-        for (i = 0; i < userBufSize; ++i)
-            UserConsolePutChar(kernelBuf[i]);
-        openFileManager->consoleWriteLock->Release();
+  //copy dta from source memory location to internal buffer
+  if(dstFile == ConsoleOutput) {
+    moveBytesFromMemToKernel(userBufVirtAddr, internalBuf, userBufSize);
+    internalBuf[userBufSize] = 0;
+    //printf("%s", internalBuf);
+    openFileManager->consoleWriteLock->Acquire();
+    for(int i = 0; i < userBufSize; i++) {
+      UserConsolePutChar(internalBuf[i]);
     }
+    openFileManager->consoleWriteLock->Release();
+  }
+  else {
+    //find current write offset
+    //use openFile::WriteAt (in openfile.h) to write data to file
+    moveBytesFromMemToKernel(userBufVirtAddr, internalBuf, userBufSize);
+    int curPID = currentThread->space->getpid();
+    UserOpenFile* userFile = processManager->getPCB(curPID)->getOpenFile(dstFile);
+    OpenFile* ofile = openFileManager->getOpenFile(userFile->fileTableIndex)->openFile;
 
-    delete[] kernelBuf;
+    //openFileManager->consoleWriteLock->Acquire();
+    actualBytesWritten = ofile->WriteAt(internalBuf,
+					userBufSize, userFile->currentPosition);
+    userFile->currentPosition += actualBytesWritten;
+    //openFileManager->consoleWriteLock->Release();
+  }
+  
+  delete[] internalBuf;
 }
 
 //----------------------------------------------------------------------
@@ -481,4 +516,23 @@ int moveBytesFromMemToKernel(int virtAddr, char* buffer, int size) {
     }
 
     return bytesCopied;
+}
+
+int userRead(int virtAddr, char* buffer, int size) {
+
+  int physAddr = 0;
+  int numBytesFromPSLeft = 0;
+  int numBytesCopied = 0;
+  int numBytesToCopy = 0;
+
+  while(size > 0) {
+    physAddr = currentThread->space->Translate(virtAddr);
+    numBytesFromPSLeft = PageSize - physAddr % PageSize;
+    numBytesToCopy = (numBytesFromPSLeft < size) ? numBytesFromPSLeft: size;
+    bcopy(buffer + numBytesCopied, machine->mainMemory + physAddr, numBytesToCopy);
+    numBytesCopied += numBytesToCopy;
+    size -= numBytesToCopy;
+    virtAddr += numBytesToCopy;
+  }
+  return numBytesCopied;
 }

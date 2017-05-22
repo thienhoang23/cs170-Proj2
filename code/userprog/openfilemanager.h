@@ -22,7 +22,7 @@ public:
     void reduceProccessOpeningOf(int index);
 
     Lock *consoleWriteLock;
-    
+    //    Lock **consoleReadLock;
 private:
     SysOpenFile* openFileTable[OPEN_FILE_TABLE_SIZE];
     int getIndexOf(OpenFile* file);

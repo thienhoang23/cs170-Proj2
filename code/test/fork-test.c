@@ -16,26 +16,26 @@ void print(char *s)
 
 proc3()
 {
-	print("proc3 halting the system...\n");
-	Halt();
+  print("proc3 halting the system...\n");
+  Halt();
 }
 
 proc2()
 {
-	print("proc2 forking proc3...\n");
-	Fork(proc3);
-	Exit(0);
+  print("proc2 forking proc3...\n");
+  Fork(proc3);
+  Exit(0);
 }
 
 proc1()
 {
-	print("proc1 forking proc2...\n");
-	Fork(proc2);
-	Exit(0);
+  print("proc1 forking proc2...\n");
+  Fork(proc2);
+  Exit(0);
 }
 
 main()
 {
-	print("main forking proc1...\n");
-	Fork(proc1);
+  print("main forking proc1...\n");
+  Fork(proc1);
 }

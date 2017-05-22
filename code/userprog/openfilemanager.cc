@@ -21,11 +21,11 @@ OpenFileManager::OpenFileManager()
 OpenFileManager::~OpenFileManager()
 {
     for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
-		if (openFileTable[i] != NULL){
-			delete openFileTable[i];
-		}
-	}
-	delete[] openFileTable;
+      if (openFileTable[i] != NULL){
+	delete openFileTable[i];
+      }
+    }
+    delete[] openFileTable;
     delete consoleWriteLock;
 }
 
@@ -37,7 +37,7 @@ OpenFileManager::~OpenFileManager()
 int OpenFileManager::addOpenFile(OpenFile* openFile, char* filename)
 {
 	int index = getIndexOf(openFile);
-	if(index != FAILED_TO_FIND){
+	if(index == FAILED_TO_FIND){
 		if(used == OPEN_FILE_TABLE_SIZE) return FAILED_TO_ADD;
 		for(int i = 0; i < OPEN_FILE_TABLE_SIZE; i++){
 			if(openFileTable[i] == NULL){

@@ -1,0 +1,23 @@
+addrspace.cc://  will be saved/restored into the currentThread->userRegisters
+exception.cc:    int curPID = currentThread->space->getpid();
+exception.cc:    delete currentThread->space;
+exception.cc:    currentThread->space = NULL;
+exception.cc:    currentThread->Finish();
+exception.cc:    currentThread->space->InitRegisters();
+exception.cc:    currentThread->space->RestoreState();
+exception.cc:    if (currentThread->space->getNumPages() > memoryManager->getNumFreeFrames() || 
+exception.cc:    AddrSpace *dupAddrSpace = new AddrSpace(currentThread->space);
+exception.cc:    parentPid = currentThread->space->getpid();
+exception.cc:    currentThread->space->InitRegisters();
+exception.cc:    // currentThread->RestoreUserState();
+exception.cc:    currentThread->space->RestoreState();
+exception.cc:  currentThread->SaveUserState();
+exception.cc:  currentThread->Yield();
+exception.cc:  currentThread->RestoreUserState();
+exception.cc:    int childExitStatus = processManager->waitFor(childPID, currentThread->space->getpid());
+exception.cc:    fd = processManager->getPCB(currentThread->space->getpid())->addOpenFile(userOpenFile);
+exception.cc:      Openfile* ofile = currentThread->space->
+exception.cc:            userBufPhysAddr = currentThread->space->Translate(userBufVirtAddr + bytesCopied);
+exception.cc:    PCB* curPCB = processManager->getPCB(currentThread->space->getpid());
+exception.cc:        physAddr = currentThread->space->Translate(virtAddr);
+progtest.cc:    currentThread->space = space;
